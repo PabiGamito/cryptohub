@@ -1,0 +1,36 @@
+{
+  "btc": [
+    /*Electrum*/
+    "1NRBTF2wiPZmze9HXcEQGt9FLsh4Caz9A4",
+    "15KrRCJc3Kqhsyq7EVLLX847qT9bWA2NKr",
+    "16bXxrQXdiMzHPoCMQTKftPRFRkhbRNuWE",
+    "14bspC6ZPfr2pSDGgMmyuE4ufxZEKz2qJL",
+    "1HYzYqtNNeoDdeJPcprh9iQ896n2p3mPWf",
+    "14MoFanFGP3mxEF4MrrYYhQgjEJoWS1DyN",
+    "14CQLdiVLwWc5QyJPiJ3dwHSLoqUR2Dnaj",
+    "12oYAZAgmg3NJEkj3secTx1LLHatreS3t1",
+    "1BxyYneUPjchoz9NDDRhfsHAHRwuwzMRmd",
+    "1FF7sHBmdN3TSELiS4WcP1xU6yhYFhshQi",
+    "1AJvhzFwobcvBwQzy7iG6KvXL7wYkASfDk",
+    "1MjwuTxECttH2i9QHBgtaPgQaH63Ju7Yzu",
+    "1MggkgPpFTNzfD5Tj8nGpeQRsNFiwRwejD",
+    "1FUD39C8kDgBaZxEhAC8uebyxZCsjfLtXU",
+    "1BR9kxh1UnyxwFfpmaTvDCEHMoaG3kTC3G",
+    "19txVsp632mAwmtMXNcCAVWZFSiWNTwYJ6",
+    "14iNxyw32VoDrXi87MrzaLK8gTfLgQHZst",
+    "1GB8gVdKeBYCtMLNtx21Lh6FLuXCs1Wu4h",
+    "17XByzpWgGiTKUBBgSvQFhNuiBxDKSikdc",
+    "13hrbFo8BYVAndKPshyuRHvHndAodv9Z3k",
+    "14dVyLdgJY9Z2h7fcUP4v3fJH96LvL88u4",
+    /*Coinbase*/
+    "1LcfvbtTT45MiYc7iqdYy8UTkYjHnKkH9F",
+    "15RHLdA6nk2BU2KL45wAj2x3u4urrx4NkS",
+    "1A8ZN2jbtqKtmKrgG3UTUK88WU62axLo8y"
+  ],
+  "eth": [
+    "0xDF4A6bb329823945Dad5D92E61ADa0a98bfba91c",
+    "0xf04FBe6E888B892e392041645e1E4b66eF3EFd4D",
+    /*Coinbase*/
+    "0xc6DC68A3252B9C63443D295B5cf6f3Cc321daA68"
+  ]
+}

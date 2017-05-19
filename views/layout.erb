@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Crypto Hub</title>
+    <!-- Include Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Raleway:300,400,700" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400" rel="stylesheet">
+    <!-- Include main css -->
+    <link rel="stylesheet" href="css/main.css" media="screen">
+    <!-- Inlude boostrap: latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <!-- Include jQuery -->
+    <script src="js/jquery.min.js"></script>
+    <!-- Include Dexie & database interactor -->
+    <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+    <script src="js/localDatabase.js"></script>
+    <!-- Include Vue.js -->
+    <script type="text/javascript" src="js/vue.min.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <nav id="menu" class="col-md-2" v-bind:class="activeNav" v-on:click.prevent>
+        <div class="top-menu">
+          ${{ balance*btc_value_in[currency] }}
+        </div>
+        <ul>
+          <li class="buy-options active" v-on:click="makeActiveNav('buy-options')">Buy Options</li>
+          <li class="active-orders" v-on:click="makeActiveNav('active-orders')">Active Orders</li>
+          <li class="history" v-on:click="makeActiveNav('history')">History</li>
+          <li class="help" v-on:click="makeActiveNav('help')">How to works?</li>
+        </ul>
+      </nav>
+
+
+        <%=yield%>
+
+        <script type="text/javascript" src="js/app.js"></script>
+        <!-- Socket.io Realtime Engine for Javascript -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.1/socket.io.js"></script>
+        <!-- Autobahn provides an open-source implementation of the Web Application Messaging Protocol V2 in JavaScript -->
+        <script src="js/autobahn.min.js"></script>
+        <!-- <script type="text/javascript" src="js/updateData.js"></script> -->
+        <!-- Draws sparkline chart -->
+        <script src="js/sparkline.js"></script>
+
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+      </body>
+    </html>

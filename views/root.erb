@@ -1,0 +1,94 @@
+
+<section id="menu-open-bar" class="col-md-3">
+  <div class="search">
+    <input type="text" v-model="searchString" placeholder="Search by pair or market name" />
+  </div>
+  <script type="text/javascript">
+    function displayNumber(n) {
+      if ( (Math.round( n * 100 ) / 100).toFixed(2) == n ) {
+        return (Math.round( n * 100 ) / 100).toFixed(2);
+      } else {
+        var nLength = n.toString().replace('.', '').length;
+        if (nLength > 8) {
+          return parseFloat(n.toString().slice(0, 8-nLength));
+        } else {
+          return n;
+        }
+      }
+    }
+  </script>
+    <div class="coin-container">
+      <ul v-for="coinsSearchData in filteredCoins" v-on:click.prevent>
+        <span class="coin-data" v-show.visible="false">{{ coin = coins[coinsSearchData.sym] }}</span>
+        <li class="coin" v-bind:class="coinsSearchData.sym" v-on:click="makeActiveCoin(coinsSearchData.sym)">
+          <ul>
+            <li class="name">
+              {{ coin.sym.toUpperCase() }}
+              <span>{{ coin.name }}</span>
+            </li>
+            <li class="owned">
+              {{ coin.owned }}
+            </li>
+            <li class="price" v-if="coin.change >= 0">
+              {{ displayNumber( coin.price*coin.owned*btc_value_in[currency] ) }}
+            </li>
+            <li class="price red" v-else>
+              {{ displayNumber( coin.price*coin.owned**btc_value_in[currency] ) }}
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="content" class="col-md-7" v-bind:class="activeCoin">
+    <span class="coin-data" v-show.visible="false">{{ coin = coins[activeCoin] }}</span>
+    <section class="header">
+      <ul class="left">
+        <li class="price">
+          {{ displayNumber( coin.price*btc_value_in[currency] ) }}
+          <span class="currency">
+            {{ currency.toUpperCase() }}
+          </span>
+        </li>
+        <li class="price-change" v-if="coin.change >= 0">
+          +{{ displayNumber(coin.change) }} ({{ (coin.changePercent).toFixed(2) }}%)
+        </li>
+        <li class="price-change red" v-else>
+          {{ displayNumber(coin.change) }} ({{ (coin.changePercent).toFixed(2) }}%)
+        </li>
+      </ul>
+      <ul class="right">
+        <li class="coin-name">
+          {{ coin.name }}
+        </li>
+        <li class="exchange">
+          {{ coin.sym.toUpperCase() }}
+        </li>
+      </ul>
+    </section>
+    <section class="graph">
+      <canvas id="sparkline" width="100%" height="100%" style="z-index: 100;">
+        Your browser does not support the HTML5 canvas tag. Please upgrade your browser. We reccomend you install <a href="https://www.google.com/chrome/browser/desktop/">Google Chrome</a>
+      </canvas>
+      <nav class="time-frame-menu">
+        <ul>
+          <li class="day active" v-on:click="makeActiveTimeFrame('day')">1 day</li>
+          <li class="week" v-on:click="makeActiveTimeFrame('week')">1 week</li>
+          <li class="month" v-on:click="makeActiveTimeFrame('month')">1 month</li>
+          <li class="month3" v-on:click="makeActiveTimeFrame('month3')">3 months</li>
+          <li class="month6" v-on:click="makeActiveTimeFrame('month6')">6 months</li>
+          <li class="year" v-on:click="makeActiveTimeFrame('year')">1 year</li>
+        </ul>
+      </nav>
+    </section>
+    <section class="footer">
+      <div class="col-xs-6">
+        <div class="button green put">Put</div>
+      </div>
+      <div class="col-xs-6">
+        <div class="button red call">Call</div>
+      </div>
+    </section>
+  </section>
+</div>
