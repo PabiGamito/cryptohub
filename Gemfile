@@ -1,0 +1,10 @@
+source "http://rubygems.org"
+
+gem "sinatra"
+gem "rest-client"
+gem "sqlite3"
+gem "rake"
+gem "activerecord"
+gem "sinatra-activerecord"
+gem "pg"
+gem "bcrypt"

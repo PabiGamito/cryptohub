@@ -1,5 +1,19 @@
 
-<section id="menu-open-bar" class="col-md-3">
+<section id="menu-bar">
+  <div class="top-menu">
+    <ul>
+      <li>
+        <span>Total Portfolio Value</span>
+        {{ ( balance*btc_value_in[currency] ).toFixed(7) }} {{ currency.toUpperCase() }}
+      </li>
+      <li>
+        <span>24h Change</span>
+        {{ ( balanceAbsChange*btc_value_in[currency] ).toFixed(7) }}
+        {{ ( balanceRelChange*100 ).toFixed(2) }}%
+      </li>
+    </ul>
+
+  </div>
   <div class="search">
     <input type="text" v-model="searchString" placeholder="Search by pair or market name" />
   </div>
@@ -18,7 +32,12 @@
     }
   </script>
     <div class="coin-container">
-      <ul v-for="coinsSearchData in filteredCoins" v-on:click.prevent>
+      <ul id="coin-list-headings" class="row">
+        <li class="col-md-2">Coin</li>
+        <li class="col-md-5">Holdings</li>
+        <li class="col-md-4">Price</li>
+      </ul>
+      <ul v-for="coinsSearchData in filteredCoins" v-on:click.prevent id="coin-list">
         <span class="coin-data" v-show.visible="false">{{ coin = coins[coinsSearchData.sym] }}</span>
         <li class="coin" v-bind:class="coinsSearchData.sym" v-on:click="makeActiveCoin(coinsSearchData.sym)">
           <ul>
@@ -26,22 +45,26 @@
               {{ coin.sym.toUpperCase() }}
               <span>{{ coin.name }}</span>
             </li>
-            <li class="owned">
-              {{ coin.owned }}
+            <li class="holding">
+              {{ ( coin.holding*coin.price*btc_value_in[currency] ).toFixed(7) }} {{ currency.toUpperCase() }}
+              <span>{{ ( coin.holding ).toFixed(7) }} {{ coin.sym.toUpperCase() }}</span>
             </li>
             <li class="price" v-if="coin.change >= 0">
-              {{ displayNumber( coin.price*coin.owned*btc_value_in[currency] ) }}
+              {{ displayNumber( coin.price*btc_value_in[currency]) }}
             </li>
             <li class="price red" v-else>
-              {{ displayNumber( coin.price*coin.owned**btc_value_in[currency] ) }}
+              {{ displayNumber( coin.price*btc_value_in[currency] ) }}
             </li>
           </ul>
         </li>
       </ul>
+      <div class="add-coin">
+        Add coin
+      </div>
     </div>
   </section>
 
-  <section id="content" class="col-md-7" v-bind:class="activeCoin">
+  <section id="content" v-bind:class="activeCoin">
     <span class="coin-data" v-show.visible="false">{{ coin = coins[activeCoin] }}</span>
     <section class="header">
       <ul class="left">
@@ -81,14 +104,6 @@
           <li class="year" v-on:click="makeActiveTimeFrame('year')">1 year</li>
         </ul>
       </nav>
-    </section>
-    <section class="footer">
-      <div class="col-xs-6">
-        <div class="button green put">Put</div>
-      </div>
-      <div class="col-xs-6">
-        <div class="button red call">Call</div>
-      </div>
     </section>
   </section>
 </div>

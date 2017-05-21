@@ -13,7 +13,7 @@ var firstPricePointDate = null;
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas, false);
 function resizeCanvas() {
-  c.width = $("section#content").width();
+  c.width = $("section#content .header").width();
   c.height = $("section#content").height()/2;
 }
 

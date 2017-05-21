@@ -13,7 +13,7 @@ function coinHash(name, sym) {
     sym: sym,
     name: name,
     price: 0, // price is alawys in BTC
-    owned: 0,
+    holding: 0,
     change: 0,
     changePercent: 0,
     historicalData: closeHash(historicalDataHash)
@@ -29,7 +29,8 @@ var app = new Vue({
     activeNav: 'buy-options',
     activeTimeFrame: 'day',
     balance: 0,
-    price: 0,
+    balanceAbsChange: 0,
+    balanceRelChange: 0,
     searchString: "",
     activeCoin: "btc",
     currency: "usd",
@@ -42,11 +43,11 @@ var app = new Vue({
     },
     coins: {
       btc: coinHash("Bitcoin", "btc"),
-      eth: coinHash("Ethereum", "eth"),
+      eth: coinHash("Ether", "eth"),
       xrp: coinHash("Ripple", "xrp"),
       xem: coinHash("NEM", "xem"),
       ltc: coinHash("Litecoin", "ltc"),
-      etc: coinHash("Etherum Classic", "etc"),
+      etc: coinHash("Ether Classic", "etc"),
       dash: coinHash("Dash", "dash"),
       xlm: coinHash("Stellar", "xlm"),
       xmr: coinHash("Monero", "xmr"),
@@ -105,7 +106,7 @@ var app = new Vue({
       if (!this.activeCoin) {
         this.makeActiveCoin(this.coins[0].sym);
       }
-      $("#menu-open-bar ul li.coin").first().addClass("active");
+      $("#menu-bar ul li.coin").first().addClass("active");
 
       var limit = 24;
         dataSet = "histohour";
@@ -127,8 +128,8 @@ var app = new Vue({
 
     makeActiveCoin: function(sym) {
       this.activeCoin = sym;
-      $("#menu-open-bar ul li.coin.active").removeClass("active");
-      $("#menu-open-bar ul li.coin." + sym).addClass("active");
+      $("#menu-bar ul li.coin.active").removeClass("active");
+      $("#menu-bar ul li.coin." + sym).addClass("active");
       this.updateChartPriceData(sym);
     },
 
@@ -147,33 +148,42 @@ var app = new Vue({
         for (var i = 0; i < keys.length; i++) {
           var key = keys[i];
           var addresses = data[key];
-          app.getAddressesValue(key, addresses);
+          app.updateHoldingValue(key, addresses);
         }
       });
     },
 
 
-    getAddressesValue: function( sym, addresses ) {
+    updateHoldingValue: function( sym, addresses ) {
       if (sym.toLowerCase() == "btc") {
-        this.getBtcAddressesValue(addresses);
+        this.updateBTCHoldingValue(addresses);
       } else if (sym.toLowerCase() == "eth") {
-        this.getEthAddressesValue(addresses);
+        this.updateETHHoldingValue(addresses);
       }
     },
 
 
-    getBtcAddressesValue: function(addresses) {
+    updateBTCHoldingValue: function(addresses) {
       // %7C is url parsed '|' = divider between addresses
       $.get( "https://blockchain.info/q/addressbalance/" + addresses.join("%7C"), function( data ) {
         // returns value in satoshis | 1BTC = 100,000,000 satoshis
         var btcBalance = parseFloat(data)/100000000;
-        app.coins["btc"].owned = btcBalance;
-        app.updateTotalBalance();
+        var coin = app.coins["btc"];
+        coin.holding = btcBalance;
+        var updateTotalHoldings = function() {
+          if (coin.price != 0) {
+            app.balance += coin.holding * coin.price;
+            app.updateBalanceChange();
+          } else {
+            setTimeout(function(){ updateTotalHoldings(); }, 100);
+          }
+        }
+        updateTotalHoldings();
       });
     },
 
 
-    getEthAddressesValue: function(addresses) {
+    updateETHHoldingValue: function(addresses) {
       $.get( "https://api.etherscan.io/api?module=account&action=balancemulti&address=" + addresses.join(","), function( data ) {
         // return value in wei | 1ETH = 1000000000000000000 Weis\
         var results = data["result"];
@@ -182,21 +192,47 @@ var app = new Vue({
           var account = results[i];
           ethBalance += parseFloat(account["balance"])/1000000000000000000;
         }
-        app.coins["eth"].owned = ethBalance;
-        app.updateTotalBalance();
+        var coin = app.coins["eth"];
+        coin.holding = ethBalance;
+        var updateTotalHoldings = function() {
+          if (coin.price != 0) {
+            app.balance += coin.holding * coin.price;
+            app.updateBalanceChange();
+          } else {
+            setTimeout(function(){ updateTotalHoldings(); }, 100);
+          }
+        }
+        updateTotalHoldings();
       });
     },
-
 
     updateTotalBalance: function() {
       var balance = 0;
       var syms = Object.keys(this.coins);
       for (var i = 0; i < syms.length; i++) {
         var sym = syms[i];
-        balance += this.coins[sym].owned;
+        var coin = this.coins[sym];
+        balance += coin.holding * coin.price;
       }
+      this.balance = balance;
     },
 
+    updateBalanceChange: function() {
+      openValue = 0;
+      closeValue = 0;
+      var syms = Object.keys(this.coins);
+      for (var i = 0; i < syms.length; i++) {
+        var sym = syms[i];
+        var coin = this.coins[sym];
+        if (coin.holding != 0) {
+          coinCloseValue = coin.holding * coin.price;
+          closeValue += coinCloseValue;
+          openValue += coinCloseValue/(1+coin.change);
+        }
+      }
+      this.balanceAbsChange = closeValue - openValue;
+      this.balanceRelChange = (closeValue)/openValue - 1;
+    },
 
     updateCurrencyConversionRates: function() {
       $.get( "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD,EUR,CNY", function( data ) {
