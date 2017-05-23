@@ -26,21 +26,37 @@ function closeHash(hash) {
 var app = new Vue({
   el: '#app',
   data: {
-    activeNav: 'buy-options',
     activeTimeFrame: 'day',
-    balance: 0,
-    balanceAbsChange: 0,
-    balanceRelChange: 0,
-    searchString: "",
+    balance: 0, // in BTC
+    balanceAbsChange: 0, // Absolute change always in BTC
+    balanceRelChange: 0, // Relative to selected currency
     activeCoin: "btc",
     currency: "usd",
-    // TODO: Add btc_change relative to other currencies to update 24 change time to match selected currency
-    btc_value_in: {
-      btc: 1,
+    btcValueIn: {
+      btc: {
+        close: 1,
+        open: 1,
+      },
+      usd: {
+        close: 0,
+        open: 0,
+      },
+      eur: {
+        close: 0,
+        open: 0,
+      },
+      cny: {
+        close: 0,
+        open: 0,
+      }
+    },
+    btcChangeRelativeTo: {
+      btc: 0,
       usd: 0,
       eur: 0,
       cny: 0
     },
+    searchString: "",
     coins: {
       btc: coinHash("Bitcoin", "btc"),
       eth: coinHash("Ether", "eth"),
@@ -107,40 +123,91 @@ var app = new Vue({
         this.makeActiveCoin(this.coins[0].sym);
       }
       $("#menu-bar ul li.coin").first().addClass("active");
-
-      var limit = 24;
-        dataSet = "histohour";
-        timeFrame = "day";
-      var keys = Object.keys(this.coins);
-      for(var i in keys) {
-          var coin = this.coins[keys[i]];
-          this.getHistoricalData(coin.sym, limit, dataSet, timeFrame);
-      }
+      this.getCoinPrices();
+      
+      // TODO: Add historical price of btc to = 1 for all prices
+      // var limit = 24;
+      //   dataSet = "histohour";
+      //   timeFrame = "day";
+      // this.getHistoricalData(this.activeCoin, limit, dataSet, timeFrame);
     },
-
-
-		makeActiveNav: function(item) {
-			this.activeNav = item;
-      $("nav#menu ul li.active").removeClass("active");
-      $("nav#menu ul li." + item).addClass("active");
-		},
-
 
     makeActiveCoin: function(sym) {
       this.activeCoin = sym;
       $("#menu-bar ul li.coin.active").removeClass("active");
       $("#menu-bar ul li.coin." + sym).addClass("active");
+      var limit = 24;
+        dataSet = "histohour";
       this.updateChartPriceData(sym);
     },
 
-
     makeActiveTimeFrame: function(timeFrame) {
+      // TODO: Replace graph with loading icon, to avoid confusion if graph doesn't load
       this.activeTimeFrame = timeFrame;
       $("#content nav.time-frame-menu ul li.active").removeClass("active");
       $("#content nav.time-frame-menu ul li." + timeFrame).addClass("active");
       this.updateChartPriceData(this.activeCoin);
     },
 
+    changeCurrency: function(sym) {
+      this.currency = sym;
+      this.updateBalanceChange();
+      // TODO: Get currency to BTC historical price to update graphs
+    },
+
+    getCoinPrices: function() {
+      var syms = Object.keys(this.coins);
+      for (var i = 0; i < syms.length; i++) {
+        var sym = syms[i];
+        this.updateCoinPrices(sym);
+      }
+    },
+
+    updateCoinPrices: function(sym) {
+      if (sym.toLowerCase() != "btc") {
+        $.get({
+          url: "https://www.cryptocompare.com/api/data/price",
+          data: {
+            e: "CCCAGG", // the exchange, CCCAGG = all exchanges avg
+            fsym: sym.toUpperCase(),
+            tsyms: "BTC"
+          }
+        }).done(function(response) {
+          var coin = app.coins[sym];
+          var data = response.Data[0];
+          var price = data.Price;
+          var open = data.Open24Hour;
+          coin.price = price;
+          coin.change = price/open - 1;
+        });
+      } else {
+        coin.price = 1;
+        coin.change = 0;
+      }
+    },
+
+
+    updateCurrencyConversionRates: function() {
+      var syms = Object.keys(this.btcValueIn);
+      $.get( "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=" + syms.join(',').toUpperCase(), function( data ) {
+        var syms = Object.keys(data);
+        for (var i = 0; i < syms.length; i++) {
+          var sym = syms[i];
+          app.btcValueIn[sym.toLowerCase()][close] = data[sym];
+        }
+      });
+      // TODO: Get timestamp from online source to be correct even if time is wrong on user device
+      var ts = Math.round(new Date().getTime() / 1000);
+      var tsYesterday = ts - (24 * 3600);
+      $.get( "https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms="+ syms.join(',').toUpperCase() + "&ts=" + tsYesterday, function( response ) {
+        var data = response["BTC"];
+        var syms = Object.keys(data);
+        for (var i = 0; i < syms.length; i++) {
+          var sym = syms[i];
+          app.btcValueIn[sym.toLowerCase()][open] = data[sym];
+        }
+      });
+    },
 
     updateBalances: function() {
       $.get( "/addresses", function( data ) {
@@ -173,7 +240,8 @@ var app = new Vue({
         var updateTotalHoldings = function() {
           if (coin.price != 0) {
             app.balance += coin.holding * coin.price;
-            app.updateBalanceChange();
+            app.updateBalanceAbsChange();
+            app.updateBalanceRelChange();
           } else {
             setTimeout(function(){ updateTotalHoldings(); }, 100);
           }
@@ -197,7 +265,8 @@ var app = new Vue({
         var updateTotalHoldings = function() {
           if (coin.price != 0) {
             app.balance += coin.holding * coin.price;
-            app.updateBalanceChange();
+            app.updateBalanceAbsChange();
+            app.updateBalanceRelChange();
           } else {
             setTimeout(function(){ updateTotalHoldings(); }, 100);
           }
@@ -218,35 +287,39 @@ var app = new Vue({
     },
 
     updateBalanceChange: function() {
-      openValue = 0;
-      closeValue = 0;
+      updateBalanceAbsChange();
+      updateBalanceRelChange();
+    },
+
+    updateBalanceAbsChange: function() {
+      openValue = 0; // in BTC
+      closeValue = 0; // in BTC
       var syms = Object.keys(this.coins);
       for (var i = 0; i < syms.length; i++) {
         var sym = syms[i];
         var coin = this.coins[sym];
-        if (coin.holding != 0) {
+        if (coin.holding !== 0) {
           coinCloseValue = coin.holding * coin.price;
           closeValue += coinCloseValue;
           openValue += coinCloseValue/(1+coin.change);
         }
       }
-      this.balanceAbsChange = closeValue - openValue;
-      this.balanceRelChange = (closeValue)/openValue - 1;
+      var btcCloseValueInSelectedCurrency = this.btcValueIn[this.currency][close];
+      var btcOpenValueInSelectedCurrency = this.btcValueIn[this.currency][open];
+      this.balanceAbsChange = (closeValue*btcCloseValueInSelectedCurrency) - (openValue*btcOpenValueInSelectedCurrency); // in selected currency
     },
 
-    updateCurrencyConversionRates: function() {
-      $.get( "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD,EUR,CNY", function( data ) {
-        var syms = Object.keys(data);
-        for (var i = 0; i < syms.length; i++) {
-          var sym = syms[i];
-          app.btc_value_in[sym.toLowerCase()] = data[sym];
-        }
-      });
+    updateBalanceRelChange: function() {
+      var btcCloseValueInSelectedCurrency = this.btcValueIn[this.currency][close];
+      var btcOpenValueInSelectedCurrency = this.btcValueIn[this.currency][open];
+      var closeValue = this.balance * btcCloseValueInSelectedCurrency;
+      var openValue = (this.balance * btcOpenValueInSelectedCurrency - this.balanceAbsChange); // this.balanceAbsChange is already in selected currency value
+      this.balanceRelChange = closeValue/openValue - 1; // in selected currency
     },
-
 
     updateChartPriceData: function(sym) {
       coin = this.coins[sym];
+      // TODO: Make is also update if price data is too old
       if (!coin.historicalData[this.activeTimeFrame].length) {
         var dataSet = null;
         var limit = null;
@@ -312,10 +385,10 @@ var app = new Vue({
             data = data.Data;
             app.coins[sym].price = data[data.length-1].close;
             app.coins[sym].historicalData[timeFrame] = data;
-            if (timeFrame === "day") {
-              app.coins[sym].change = (data[data.length-1].close * 1000000000 - data[0].open * 1000000000) / 1000000000;
-              app.coins[sym].changePercent = ((data[data.length-1].close - data[0].open) / data[0].open) * 100;
-            }
+            // if (timeFrame === "day") {
+            //   app.coins[sym].change = (data[data.length-1].close * 1000000000 - data[0].open * 1000000000) / 1000000000;
+            //   app.coins[sym].changePercent = ((data[data.length-1].close - data[0].open) / data[0].open) * 100;
+            // }
             app.updateChartPriceData(sym);
           } else {
             setTimeout(function () {

@@ -4,11 +4,11 @@
     <ul>
       <li>
         <span>Total Portfolio Value</span>
-        {{ ( balance*btc_value_in[currency] ).toFixed(7) }} {{ currency.toUpperCase() }}
+        {{ ( balance*btcValueIn[currency][close] ).toFixed(7) }} {{ currency.toUpperCase() }}
       </li>
       <li>
         <span>24h Change</span>
-        {{ ( balanceAbsChange*btc_value_in[currency] ).toFixed(7) }}
+        {{ ( balanceAbsChange ).toFixed(7) }}
         {{ ( balanceRelChange*100 ).toFixed(2) }}%
       </li>
     </ul>
@@ -46,14 +46,14 @@
               <span>{{ coin.name }}</span>
             </li>
             <li class="holding">
-              {{ ( coin.holding*coin.price*btc_value_in[currency] ).toFixed(7) }} {{ currency.toUpperCase() }}
+              {{ ( coin.holding*coin.price*btcValueIn[currency][close] ).toFixed(7) }} {{ currency.toUpperCase() }}
               <span>{{ ( coin.holding ).toFixed(7) }} {{ coin.sym.toUpperCase() }}</span>
             </li>
             <li class="price" v-if="coin.change >= 0">
-              {{ displayNumber( coin.price*btc_value_in[currency]) }}
+              {{ displayNumber( coin.price*btcValueIn[currency][close] ) }}
             </li>
             <li class="price red" v-else>
-              {{ displayNumber( coin.price*btc_value_in[currency] ) }}
+              {{ displayNumber( coin.price*btcValueIn[currency][close] ) }}
             </li>
           </ul>
         </li>
@@ -69,7 +69,7 @@
     <section class="header">
       <ul class="left">
         <li class="price">
-          {{ displayNumber( coin.price*btc_value_in[currency] ) }}
+          {{ displayNumber( coin.price*btcValueIn[currency][close] ) }}
           <span class="currency">
             {{ currency.toUpperCase() }}
           </span>
