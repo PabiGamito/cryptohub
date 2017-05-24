@@ -36,18 +36,24 @@ var app = new Vue({
       btc: {
         close: 1,
         open: 1,
+        historicalData: {
+
+        }
       },
       usd: {
         close: 0,
         open: 0,
+        historicalData: closeHash(historicalDataHash)
       },
       eur: {
         close: 0,
         open: 0,
+        historicalData: closeHash(historicalDataHash)
       },
       cny: {
         close: 0,
         open: 0,
+        historicalData: closeHash(historicalDataHash)
       }
     },
     btcChangeRelativeTo: {
@@ -67,6 +73,7 @@ var app = new Vue({
       dash: coinHash("Dash", "dash"),
       xlm: coinHash("Stellar", "xlm"),
       xmr: coinHash("Monero", "xmr"),
+      sc: coinHash("Siacoin", "sc"),
       bcn: coinHash("Bytecoin", "bcn"),
       maid: coinHash("MaidSafe Coin", "maid")
     },
@@ -122,14 +129,13 @@ var app = new Vue({
       if (!this.activeCoin) {
         this.makeActiveCoin(this.coins[0].sym);
       }
+      // Activate first coin
+      // TODO: Make it activate another coin if selected coin is not first in coins list
       $("#menu-bar ul li.coin").first().addClass("active");
+      // update all tracked coins' prices
       this.getCoinPrices();
-      
-      // TODO: Add historical price of btc to = 1 for all prices
-      // var limit = 24;
-      //   dataSet = "histohour";
-      //   timeFrame = "day";
-      // this.getHistoricalData(this.activeCoin, limit, dataSet, timeFrame);
+      // load active coin's graph
+      this.updateChartPriceData(this.activeCoin);
     },
 
     makeActiveCoin: function(sym) {
@@ -189,7 +195,7 @@ var app = new Vue({
 
     updateCurrencyConversionRates: function() {
       var syms = Object.keys(this.btcValueIn);
-      $.get( "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=" + syms.join(',').toUpperCase(), function( data ) {
+      $.get( "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=" + syms.join(',').toUpperCase() + "&extraParams=cryptohub", function( data ) {
         var syms = Object.keys(data);
         for (var i = 0; i < syms.length; i++) {
           var sym = syms[i];
@@ -199,7 +205,7 @@ var app = new Vue({
       // TODO: Get timestamp from online source to be correct even if time is wrong on user device
       var ts = Math.round(new Date().getTime() / 1000);
       var tsYesterday = ts - (24 * 3600);
-      $.get( "https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms="+ syms.join(',').toUpperCase() + "&ts=" + tsYesterday, function( response ) {
+      $.get( "https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms="+ syms.join(',').toUpperCase() + "&ts=" + tsYesterday + "&extraParams=cryptohub", function( response ) {
         var data = response["BTC"];
         var syms = Object.keys(data);
         for (var i = 0; i < syms.length; i++) {
@@ -208,6 +214,13 @@ var app = new Vue({
         }
       });
     },
+
+
+    updateCurrencyConversionHistoricalData: function(dataSet) {
+      // dataSet = "histominute" or "histohour" or "histoday"
+      this.getHistoricalData("BTC", this.currency.toUpperCase(), dataSet);
+    },
+
 
     updateBalances: function() {
       $.get( "/addresses", function( data ) {
@@ -318,43 +331,55 @@ var app = new Vue({
     },
 
     updateChartPriceData: function(sym) {
-      coin = this.coins[sym];
-      // TODO: Make is also update if price data is too old
-      if (!coin.historicalData[this.activeTimeFrame].length) {
+      // TODO: Make it also update if price data is too old
+      // TODO: Make data getting more efficient instead of making a call for each time period only make on call and update time periods with relavent data
+      // TODO: Add loading symbol while data is loading
+
+      if (!this.coins[sym].historicalData[this.activeTimeFrame].length || !this.btcValueIn[this.currency].historicalData[this.activeTimeFrame].length) {
         var dataSet = null;
-        var limit = null;
         switch (this.activeTimeFrame) {
           case "day":
-            dataSet = "histohour";
-            limit = 24;
+            dataSet = "histominute";
             break;
           case "week":
+            // update week and month values in on req
             dataSet = "histohour";
-            limit = 24*7;
             break;
           case "month":
-            dataSet = "histoday";
-            limit = 30;
+            // update week and month values in on req
+            dataSet = "histohour";
             break;
           case "month3":
+            // update month3, month6 and year values in on req
             dataSet = "histoday";
-            limit = 30*3;
             break;
           case "month6":
+            // update month3, month6 and year values in on req
             dataSet = "histoday";
-            limit = 30*6;
             break;
           case "year":
+            // update month3, month6 and year values in on req
             dataSet = "histoday";
-            limit = 365;
             break;
         }
-        this.getHistoricalData(sym, limit, dataSet, this.activeTimeFrame);
+
+        if (!this.btcValueIn[this.currency].historicalData[this.activeTimeFrame].length) {
+          console.log("updateChartPriceData: getting historical data for active currency conversion");
+          this.updateCurrencyConversionHistoricalData(dataSet);
+        }
+        if (!this.coins[sym].historicalData[this.activeTimeFrame].length) {
+          console.log("updateChartPriceData: getting historical data for active pair");
+          this.getHistoricalData(sym, "BTC", dataSet);
+        }
+
       } else {
+        console.log("updateChartPriceData: updating graph");
         var data = this.coins[sym].historicalData[this.activeTimeFrame];
+        var conversionHistoricalPrice = this.btcValueIn[this.currency].historicalData[this.activeTimeFrame];
         priceData = [];
         for(i=0; i < data.length; i++) {
-          priceData.push(data[i].close);
+          conversionPrice = conversionHistoricalPrice[i].close;
+          priceData.push(data[i].close*conversionPrice);
         }
         latestPricePointDate = data[0].time;
         firstPricePointDate = data[data.length-1].time;
@@ -363,42 +388,139 @@ var app = new Vue({
         }
         ctx.clearRect(0, 0, c.width, c.height);
         renderCanvas();
-        renderCanvas();
       }
     },
 
+    dataToKeep: function(data) {
+      // Only keep between 90 & 180 data points
+      var delta = Math.floor(data.length/90);
+      var keptData = [];
+      for( var i = data.length-1; i >= 0; i-=delta) {
+        keptData.unshift(data[i]);
+      }
+      return keptData;
+    },
 
-    getHistoricalData: function(sym, limit, dataSet, timeFrame) {
-      if (sym.toLowerCase() == "btc") {
-        this.coins[sym].price = 1;
+    getHistoricalData: function(fsym, tsym, dataSet) {
+      var limits = null;
+      if (fsym.toLowerCase() == "btc" && tsym.toLowerCase() == "btc") {
+        // README: Keep limits upto date with limit in "else" condition to keep app working
+        limits = {
+          day: 1440,
+          week: 24*7,
+          month: 24*30,
+          month3: 30*3,
+          month6: 30*6,
+          year: 365
+        };
+        timeFrames = Object.keys(limits);
+        console.log("getHistoricalData: updating coin historicalData (BTC)");
+        for (var i = 0; i < timeFrames.length; i++) {
+          timeFrame = timeFrames[i];
+          limit = limits[timeFrame];
+          var data = [];
+          for(t = 0; t < limit; t++){
+            data.push({
+              close: 1,
+              high: 1,
+              low: 1,
+              open: 1
+              // TODO: Find a way to add this data
+              // time: ?,
+              // volumefrom: ?,
+              // volumeto: ?
+            });
+          }
+          var keptData = this.dataToKeep(data);
+          this.coins[fsym].historicalData[timeFrame] = keptData;
+        }
+        this.coins[fsym].price = 1;
+        this.updateChartPriceData(fsym);
+
       } else {
+        var attempts = 0;
+        var getLimit = null;
+        switch (dataSet) {
+          case "histominute":
+            dataSet = "histominute";
+            getLimit = 1440;
+            limits = {
+              day: 1440
+            };
+            break;
+          case "histohour":
+            // update week and month values on req
+            dataSet = "histohour";
+            getLimit = 24*30;
+            limits = {
+              week: 24*7,
+              month: 24*30
+            };
+            break;
+          case "histoday":
+            // update month3 and month6 and year values on req
+            dataSet = "histoday";
+            getLimit = 365;
+            limits = {
+              month3: 30*3,
+              month6: 30*6,
+              year: 365
+            };
+            break;
+        }
         $.get({
           url: "https://www.cryptocompare.com/api/data/" + dataSet + "/",
           data: {
             e: "CCCAGG", // the exchange, CCCAGG = all exchanges avg
-            fsym: sym,
-            tsym: "BTC",
-            limit: limit
+            fsym: fsym,
+            tsym: tsym,
+            limit: getLimit,
+            extraParams: "cryptohub"
           }
         }).done(function(data) {
           if (data.Response === "Success") {
             data = data.Data;
-            app.coins[sym].price = data[data.length-1].close;
-            app.coins[sym].historicalData[timeFrame] = data;
-            // if (timeFrame === "day") {
-            //   app.coins[sym].change = (data[data.length-1].close * 1000000000 - data[0].open * 1000000000) / 1000000000;
-            //   app.coins[sym].changePercent = ((data[data.length-1].close - data[0].open) / data[0].open) * 100;
-            // }
-            app.updateChartPriceData(sym);
-          } else {
+            // Update latest price
+            var close = data[data.length-1].close;
+            if (tsym.toLowerCase() == "btc") {
+              app.coins[fsym].price = close;
+            } else if (fsym.toLowerCase() == "btc") {
+              // it's a request to update currency conversion history
+              app.btcValueIn[tsym.toLowerCase()].close = close;
+            }
+            // Store historical price data into application variable
+            timeFrames = Object.keys(limits);
+            console.log("getHistoricalData: updating coin historicalData");
+            for (var i = 0; i < timeFrames.length; i++) {
+              var timeFrame = timeFrames[i];
+              var limit = limits[timeFrame];
+              var keptData = app.dataToKeep(data.slice(0-limit));
+              if (tsym.toLowerCase() == "btc") {
+                app.coins[fsym].historicalData[timeFrame] = keptData;
+              } else {
+                // it's a request to update currency conversion history
+                console.log("getHistoricalData: updating currency conversion historicalData");
+                app.btcValueIn[tsym.toLowerCase()].historicalData[timeFrame] = keptData;
+              }
+
+            }
+            if (tsym.toLowerCase() == "btc") {
+              app.updateChartPriceData(fsym);
+            } else {
+              app.updateChartPriceData(app.activeCoin);
+            }
+          } else if (attempts < 3) {
+            attempts += 1;
             setTimeout(function () {
-              app.getHistoricalData(sym, limit, dataSet, timeFrame);
+              app.getHistoricalData(fsym, tsym, dataSet);
             }, 1000);
           }
         });
       }
 
     }
+
+
 	}
 });
 

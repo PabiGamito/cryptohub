@@ -52,19 +52,8 @@ function renderCanvas() {
   var timeNow = new Date();
   var sparkLineBeginTime = new Date(firstPricePointDate*1000).getTime();
   var sparkLineEndTime = new Date(latestPricePointDate*1000).getTime();
-  var nextHour = timeNow.getHours()+1;
-  var endOptionTime = new Date(timeNow.getFullYear(), timeNow.getMonth(), timeNow.getDate(), nextHour, 0, 0).getTime();
-  var secondsTillExpiration = (endOptionTime-timeNow.getTime());
-  var sparkLineTime = sparkLineEndTime - sparkLineBeginTime;
-  var graphTime = secondsTillExpiration + sparkLineTime;
 
-  if ( $("#put:hover").length ) {
-    renderPutOverlay();
-  } else if ( $("#call:hover").length ) {
-    renderCallOverlay();
-  }
-
-  sparkLineWidth = ( (c.width-margin*2) * sparkLineTime ) / graphTime;
+  sparkLineWidth = c.width-margin*2;
 
   renderSparkLine(sparkLineWidth); // rendersSparkLine and returns SparkLine end Coordinates
 
