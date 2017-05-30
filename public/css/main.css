@@ -54,6 +54,7 @@ nav ul li.active {
   max-height: 100%;
   height: 100%;
   height: 100vh;
+  min-height: 100vh;
   max-height: 100vh;
   padding: 0;
   background: #F2F5F8;
@@ -63,7 +64,10 @@ nav ul li.active {
   left: 0;
   display: block;
   z-index: 1;
-  width: 300px;
+  width: 380px;
+  /*overflow-y: hidden;*/
+  display: flex;
+  flex-direction: column;
 }
 #menu-bar .top-menu {
   font-family: 'Source Sans Pro', sans-serif;
@@ -76,6 +80,8 @@ nav ul li.active {
   background: #3ECC94;
   color: white;
   padding: 20px;
+  z-index: 5;
+  height: 120px;
 }
 #menu-bar .top-menu ul {
   list-style: none;
@@ -89,24 +95,39 @@ nav ul li.active {
 }
 #menu-bar .search {
   padding: 20px;
-  border-bottom: 1px solid #DADEE0;
-}
-#menu-bar .coin-container {
-  max-height: 100%;
-  overflow-y: auto;
-  -ms-overflow-style: none;  // IE 10+
-  overflow: -moz-scrollbars-none;  // Firefox
-}
-#menu-bar .coin-container::-webkit-scrollbar {
-    display: none;  // Safari and Chrome
+  /*border-bottom: 1px solid #DADEE0;*/
+  height: 80px;
+  z-index: 5;
 }
 #menu-bar ul#coin-list-headings {
   list-style: none;
   margin: 0;
+  height: 20px;
+  z-index: 5;
+}
+.bottom-shadow {
+  -webkit-box-shadow: -2px 5px 10px 0px #E7EAEC;
+   -moz-box-shadow: -2px 5px 10px 0px #E7EAEC;
+        box-shadow: -2px 5px 10px 0px #E7EAEC;
 }
 #menu-bar ul#coin-list-headings li {
   display: inline-block;
 }
+#menu-bar .coin-container {
+  align-items: stretch;
+  flex: 1;
+  height: 100%;
+  height: 100vh;
+  overflow-y: auto;
+  -ms-overflow-style: none;  /*IE 10+*/
+  overflow: -moz-scrollbars-none;  /*Firefox*/
+  z-index: -1;
+  padding-bottom: 35px;
+}
+#menu-bar .coin-container::-webkit-scrollbar {
+    display: none;  // Safari and Chrome
+}
+
 #menu-bar ul#coin-list {
   list-style: none;
   margin: 0;
@@ -116,6 +137,10 @@ nav ul li.active {
 #menu-bar div.add-coin {
   text-align: center;
   cursor: pointer;
+  border-radius: 5px;
+  border: 2px dashed #848F9C;
+  margin: 8px 8px 0 8px;
+  padding: 8px 0 8px 0;
 }
 #menu-bar ul li.coin:not(:first-child) {
   border-top: 1px solid #DADEE0;
@@ -195,18 +220,20 @@ nav ul li.active {
   height: 100%;
   position: relative;
   float: right;
-  width: calc(100% - 300px);
+  width: calc(100% - 380px);
   min-height: 100%;
   min-height: 100vh;
   padding: 30px;
   box-shadow: -2px 0px 10px 0px #E7EAEC;
 }
 #content .header {
-  border-bottom: 1px solid #DADEE0;
+  /*border-bottom: 1px solid #DADEE0;*/
   padding-bottom: 15px;
   margin-bottom: 5px;
   display:flex;
   justify-content:space-between;
+  margin: -30px -30px 0 -30px;
+  padding: 30px 30px 30px 30px;
 }
 #content .header ul {
   list-style: none;

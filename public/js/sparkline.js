@@ -1,4 +1,4 @@
-// TODO: Mark chart line margin larger, but only spark line margin not general margin
+// TODO: Figure out why chart displayed data is not correct
 
 // Defines c as the canvas object
 var c = document.getElementById("sparkline");

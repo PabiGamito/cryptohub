@@ -1,8 +1,15 @@
 require "bundler/setup"
 require "rubygems"
 require "sinatra"
+require 'sinatra/base'
+require 'logger'
 require "sinatra/activerecord"
 require './config/environments' #database configuration
+
+
+set :logging, true
+  
+@@logger = Logger.new('/tmp/cryptohub.log')
 
 # avoids HTTP errors when adding rest-client gem caused by Rake
 set :server, 'webrick'

@@ -14,8 +14,10 @@ function coinHash(name, sym) {
     name: name,
     price: 0, // price is alawys in BTC
     holding: 0,
+    open: 0,
     change: 0,
     changePercent: 0,
+    changeInSelectedCurrency: 0,
     historicalData: closeHash(historicalDataHash)
   });
 }
@@ -123,19 +125,23 @@ var app = new Vue({
   },
   methods: {
     initialize: function() {
-      this.updateBalances();
-      this.updateCurrencyConversionRates();
-
       if (!this.activeCoin) {
         this.makeActiveCoin(this.coins[0].sym);
       }
       // Activate first coin
       // TODO: Make it activate another coin if selected coin is not first in coins list
       $("#menu-bar ul li.coin").first().addClass("active");
-      // update all tracked coins' prices
+
+      this.refresh();
+    },
+
+    refresh: function() {
+      this.updateBalances();
+      this.updateCurrencyConversionRates();
       this.getCoinPrices();
-      // load active coin's graph
       this.updateChartPriceData(this.activeCoin);
+      this.updateChangeInSelectedCurrencyValues();
+      setTimeout(function(){ this.refresh() }, 60*1000); // Refresh every 1min
     },
 
     makeActiveCoin: function(sym) {
@@ -158,7 +164,7 @@ var app = new Vue({
     changeCurrency: function(sym) {
       this.currency = sym;
       this.updateBalanceChange();
-      // TODO: Get currency to BTC historical price to update graphs
+      this.updateChangeInSelectedCurrencyValues();
     },
 
     getCoinPrices: function() {
@@ -179,15 +185,19 @@ var app = new Vue({
             tsyms: "BTC"
           }
         }).done(function(response) {
+          console.log("updateCoinPrices: updating coin price " + sym);
           var coin = app.coins[sym];
           var data = response.Data[0];
           var price = data.Price;
           var open = data.Open24Hour;
           coin.price = price;
+          coin.open = open;
           coin.change = price/open - 1;
         });
       } else {
+        // For BTC pair
         coin.price = 1;
+        coin.open = 1;
         coin.change = 0;
       }
     },
@@ -195,30 +205,82 @@ var app = new Vue({
 
     updateCurrencyConversionRates: function() {
       var syms = Object.keys(this.btcValueIn);
-      $.get( "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=" + syms.join(',').toUpperCase() + "&extraParams=cryptohub", function( data ) {
-        var syms = Object.keys(data);
-        for (var i = 0; i < syms.length; i++) {
-          var sym = syms[i];
-          app.btcValueIn[sym.toLowerCase()][close] = data[sym];
+      $.get({
+        url: "https://www.cryptocompare.com/api/data/price",
+        data: {
+          e: "CCCAGG", // the exchange, CCCAGG = all exchanges avg
+          fsym: "BTC",
+          tsyms: syms.join(',').toUpperCase()
         }
-      });
-      // TODO: Get timestamp from online source to be correct even if time is wrong on user device
-      var ts = Math.round(new Date().getTime() / 1000);
-      var tsYesterday = ts - (24 * 3600);
-      $.get( "https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms="+ syms.join(',').toUpperCase() + "&ts=" + tsYesterday + "&extraParams=cryptohub", function( response ) {
-        var data = response["BTC"];
-        var syms = Object.keys(data);
-        for (var i = 0; i < syms.length; i++) {
-          var sym = syms[i];
-          app.btcValueIn[sym.toLowerCase()][open] = data[sym];
+      }).done(function(response) {
+        if (response["Response"] == "Success") {
+          var data = response["Data"];
+          console.log("updateCurrencyConversionRates: Updating currency conversion rates");
+          for (var i = 0; i < data.length; i++) {
+            var curData = data[i];
+            var sym = curData["Symbol"].toLowerCase();
+            app.btcValueIn[sym].close = curData["Price"];
+            app.btcValueIn[sym].open = curData["Open24Hour"];
+          }
+        } else {
+          console.log("updateCurrencyConversionRates: Failed to get currency conversion rates");
+          updateCurrencyConversionRates();
         }
+
       });
+      // $.get( "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=" + syms.join(',').toUpperCase() + "&extraParams=cryptohub", function( data ) {
+      //   var syms = Object.keys(data);
+      //   for (var i = 0; i < syms.length; i++) {
+      //     var sym = syms[i];
+      //     app.btcValueIn[sym.toLowerCase()].close = data[sym];
+      //   }
+      // });
+      // // TODO: Get timestamp from online source to be correct even if time is wrong on user device
+      // var ts = Math.round(new Date().getTime() / 1000);
+      // var tsYesterday = ts - (24 * 3600);
+      // $.get( "https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms="+ syms.join(',').toUpperCase() + "&ts=" + tsYesterday + "&extraParams=cryptohub", function( response ) {
+      //   var data = response["BTC"];
+      //   var syms = Object.keys(data);
+      //   for (var i = 0; i < syms.length; i++) {
+      //     var sym = syms[i];
+      //     app.btcValueIn[sym.toLowerCase()].open = data[sym];
+      //   }
+      //
+      // });
     },
 
 
     updateCurrencyConversionHistoricalData: function(dataSet) {
       // dataSet = "histominute" or "histohour" or "histoday"
       this.getHistoricalData("BTC", this.currency.toUpperCase(), dataSet);
+    },
+
+    updateChangeInSelectedCurrencyValues: function () {
+      var coinSyms = Object.keys(this.coins);
+      for (var i = 0; i < coinSyms.length; i++) {
+        var coin = this.coins[coinSyms[i]];
+        this.updateChangeInSelectedCurrency(coinSyms[i]);
+      }
+    },
+
+    updateChangeInSelectedCurrency: function (sym) {
+      // TODO: Figure out why this isn't working
+      var coin = this.coins[sym];
+      var btcCloseValueInSelectedCurrency = this.btcValueIn[this.currency].close;
+      var btcOpenValueInSelectedCurrency = this.btcValueIn[this.currency].open;
+      if (coin.price == 0 || btcCloseValueInSelectedCurrency == 0 || btcOpenValueInSelectedCurrency == 0) {
+        console.log("updateChangeInSelectedCurrency: Waiting for values to not be null");
+        setTimeout(function() {app.updateChangeInSelectedCurrency(sym);}, 250);
+      } else {
+        console.log("updateChangeInSelectedCurrency: updating coin " + coin.sym + " change in selected currency");
+        var closeValue = coin.price * btcCloseValueInSelectedCurrency;
+        var openValue = coin.open * btcOpenValueInSelectedCurrency;
+        console.log(coin.sym + " closed: " + closeValue);
+        console.log(coin.sym + " opened:" + openValue);
+        var changeInSelectedCurrency = closeValue/openValue - 1; // in selected currency
+        coin.changeInSelectedCurrency = changeInSelectedCurrency;
+      }
+
     },
 
 
@@ -317,14 +379,14 @@ var app = new Vue({
           openValue += coinCloseValue/(1+coin.change);
         }
       }
-      var btcCloseValueInSelectedCurrency = this.btcValueIn[this.currency][close];
-      var btcOpenValueInSelectedCurrency = this.btcValueIn[this.currency][open];
+      var btcCloseValueInSelectedCurrency = this.btcValueIn[this.currency].close;
+      var btcOpenValueInSelectedCurrency = this.btcValueIn[this.currency].open;
       this.balanceAbsChange = (closeValue*btcCloseValueInSelectedCurrency) - (openValue*btcOpenValueInSelectedCurrency); // in selected currency
     },
 
     updateBalanceRelChange: function() {
-      var btcCloseValueInSelectedCurrency = this.btcValueIn[this.currency][close];
-      var btcOpenValueInSelectedCurrency = this.btcValueIn[this.currency][open];
+      var btcCloseValueInSelectedCurrency = this.btcValueIn[this.currency].close;
+      var btcOpenValueInSelectedCurrency = this.btcValueIn[this.currency].open;
       var closeValue = this.balance * btcCloseValueInSelectedCurrency;
       var openValue = (this.balance * btcOpenValueInSelectedCurrency - this.balanceAbsChange); // this.balanceAbsChange is already in selected currency value
       this.balanceRelChange = closeValue/openValue - 1; // in selected currency
@@ -427,8 +489,8 @@ var app = new Vue({
               open: 1
               // TODO: Find a way to add this data
               // time: ?,
-              // volumefrom: ?,
-              // volumeto: ?
+              // volumefrom: ?, // need to be taken from BTC to USD
+              // volumeto: ?// need to be taken from BTC to USD
             });
           }
           var keptData = this.dataToKeep(data);
